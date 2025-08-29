@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漢字リストメーカー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 antialiased leading-relaxed text-gray-800">
+
+    <div class="bg-gradient-to-br from-indigo-50 to-blue-100 min-h-screen p-8 flex items-center justify-center">
+        <div class="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 transform transition-all hover:scale-105 duration-300">
+            <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-6 font-inter">
+                漢字リストメーカー
+            </h1>
+            <p class="text-center text-sm text-gray-500 mb-6">
+                ※このリストはブラウザを閉じると消えます。
+            </p>
+
+            <form id="kanji-form" class="flex flex-col sm:flex-row gap-4 mb-8">
+                <input
+                    type="text"
+                    id="kanji-input"
+                    placeholder="漢字を入力してください"
+                    class="flex-grow p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700"
+                />
+                <button
+                    type="submit"
+                    class="p-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-colors duration-200 shadow-md active:shadow-none active:translate-y-1"
+                >
+                    追加
+                </button>
+            </form>
+
+            <ul id="kanji-list" class="space-y-4 max-h-96 overflow-y-auto pr-2 mb-8">
+                <!-- 漢字リストがここに表示されます -->
+            </ul>
+
+            <div id="slideshow-container" class="mt-8 flex flex-col items-center">
+                <button
+                    id="start-btn"
+                    class="p-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors duration-200 shadow-md active:shadow-none active:translate-y-1 w-full sm:w-auto"
+                >
+                    開始
+                </button>
+                <div
+                    id="display-kanji"
+                    class="mt-8 text-9xl font-extrabold text-gray-800 text-center tracking-wide"
+                >
+                    &nbsp;
+                </div>
+                <div id="timer-display" class="mt-4 text-xl text-gray-600"></div>
+                <button
+                    id="next-btn"
+                    class="mt-8 p-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-colors duration-200 shadow-md active:shadow-none active:translate-y-1 w-full sm:w-auto hidden"
+                >
+                    次へ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const kanjiInput = document.getElementById('kanji-input');
+        const kanjiListElement = document.getElementById('kanji-list');
+        const kanjiForm = document.getElementById('kanji-form');
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const displayKanji = document.getElementById('display-kanji');
+        const timerDisplay = document.getElementById('timer-display');
+
+        let kanjiList = JSON.parse(localStorage.getItem('kanjiList')) || [];
+        let currentIndex = 0;
+        let timer;
+
+        function renderList() {
+            kanjiListElement.innerHTML = '';
+            if (kanjiList.length === 0) {
+                kanjiListElement.innerHTML = `<li class="text-center text-gray-500">まだ漢字がありません。最初に追加してみましょう！</li>`;
+            } else {
+                kanjiList.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-gray-50 p-4 rounded-xl shadow-inner flex justify-between items-center transition-transform hover:scale-[1.01] duration-150';
+                    li.innerHTML = `
+                        <span class="text-2xl font-medium text-gray-800 font-sans tracking-wide">
+                            ${item}
+                        </span>
+                        <button
+                            data-index="${index}"
+                            class="delete-btn bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold opacity-70 hover:opacity-100 transition-opacity duration-200"
+                        >
+                            &times;
+                        </button>
+                    `;
+                    kanjiListElement.appendChild(li);
+                });
+            }
+        }
+
+        function saveList() {
+            localStorage.setItem('kanjiList', JSON.stringify(kanjiList));
+        }
+
+        function startTimer() {
+            let timeLeft = 3;
+            timerDisplay.textContent = `${timeLeft}秒`;
+            timer = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `${timeLeft}秒`;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    displayKanji.textContent = ''; // 漢字を非表示にする
+                    timerDisplay.textContent = '';
+                }
+            }, 1000);
+        }
+
+        kanjiForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newKanji = kanjiInput.value.trim();
+            if (newKanji) {
+                kanjiList.push(newKanji);
+                kanjiInput.value = '';
+                saveList();
+                renderList();
+                currentIndex = 0;
+                displayKanji.textContent = '';
+                nextBtn.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+                clearInterval(timer);
+                timerDisplay.textContent = '';
+            }
+        });
+
+        kanjiListElement.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const index = e.target.getAttribute('data-index');
+                kanjiList.splice(index, 1);
+                saveList();
+                renderList();
+                currentIndex = 0;
+                displayKanji.textContent = '';
+                nextBtn.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+                clearInterval(timer);
+                timerDisplay.textContent = '';
+            }
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (kanjiList.length > 0) {
+                currentIndex = 0;
+                displayKanji.textContent = kanjiList[currentIndex];
+                startBtn.classList.add('hidden');
+                nextBtn.classList.remove('hidden');
+                clearInterval(timer);
+                startTimer();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            currentIndex++;
+            clearInterval(timer);
+            if (currentIndex < kanjiList.length) {
+                displayKanji.textContent = kanjiList[currentIndex];
+                startTimer();
+            } else {
+                displayKanji.textContent = '終わり';
+                nextBtn.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+                currentIndex = 0;
+                timerDisplay.textContent = '';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', renderList);
+    </script>
+
+</body>
+</html>
